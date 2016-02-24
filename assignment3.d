@@ -93,6 +93,13 @@ class closV : Value {
    }
 }
 
+class boolIfException : Exception{
+   this(char[] msg){
+      super(msg);
+   }
+
+}
+
 void main() {
    writeln("Assignment 3 in D");
    MtEnv s;
@@ -110,6 +117,22 @@ Value interp(ExprC e, Env env) {
    if (cast(numC)e) {
       return new numV((cast(numC)e).n);
    }
+   else if(cast(ifC) e){
+      if(cast(boolC)(cast(ifC)e).tst){
+         if((cast(boolV)interp((cast(ifC)e).tst, env)).b){
+            interp((cast(ifC)e).thn, env)
+         }
+         else{
+            interp((cast(ifC)e).els, env)
+         }
+      }
+      else{
+         throw new boolIfException("First clause of an if statement must equate to a boolean");
+      }
+   }
 
-   return new numV(1);
+   else{
+      return new numV(1);
+   }
+   
 }
