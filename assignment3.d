@@ -1,4 +1,4 @@
-import std.stdio;
+import std.stdio, std.regex, std.conv;
 
 interface ExprC {}
 
@@ -94,8 +94,17 @@ class closV : Value {
 }
 
 void main() {
-   writeln("Assignment 3 in D");
-   MtEnv s;
+   writeln("DOWQQ");
+   
+   // tests for parse
+   assert((cast(numC)parse("0")).n == 0, "failed to parse \"0\"");
+   assert((cast(numC)parse("100")).n == 100, "failed to parse \"100\"");
+   assert((cast(numC)parse("-99")).n == -99,  "failed to parse \"-99\"");
+   assert((cast(numC)parse("-0")).n == 0, "failed to parse \"-0\"");
+   assert((cast(boolC)parse("true")).b == true, "failed to parse \"true\"");
+   assert((cast(boolC)parse("false")).b == false, "failed to parse \"false\"");
+
+   writeln("All asserts passed");
 }
 
 string topEval(string s) {
@@ -110,6 +119,26 @@ Value interp(ExprC e, Env env) {
    if (cast(numC)e) {
       return new numV((cast(numC)e).n);
    }
+   else if (cast(boolC)e) {
+      return new boolV((cast(boolC)e).b);
+   }
 
    return new numV(1);
 }
+
+ExprC parse (string s) {
+   if (matchFirst(s, r"(-?[1-9])+|(-?0)")) {
+      return new numC(to!int(s));
+   }
+   if (matchFirst(s, r"true")) {
+      return new boolC(true);
+   }
+   if (matchFirst(s, r"false")) {
+      return new boolC(false);
+   }
+   if (matchFirst(s,))
+
+   assert(false, "Invalid OWQQ expression: \"" ~ s ~ "\"");
+   return new numC(0);
+}
+
