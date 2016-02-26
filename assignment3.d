@@ -94,7 +94,7 @@ class closV : Value {
 }
 
 class boolIfException : Exception{
-   this(char[] msg){
+   this(string msg){
       super(msg);
    }
 
@@ -120,19 +120,21 @@ Value interp(ExprC e, Env env) {
    else if(cast(ifC) e){
       if(cast(boolC)(cast(ifC)e).tst){
          if((cast(boolV)interp((cast(ifC)e).tst, env)).b){
-            interp((cast(ifC)e).thn, env)
+            interp((cast(ifC)e).thn, env);
          }
          else{
-            interp((cast(ifC)e).els, env)
+            interp((cast(ifC)e).els, env);
          }
       }
       else{
          throw new boolIfException("First clause of an if statement must equate to a boolean");
       }
    }
-
-   else{
-      return new numV(1);
+   else if(cast(lamC) e){
+      return new closV((cast(lamC) e).args , (cast(lamC) e).bdy, env);
    }
+
+   return new numV(1);
+   
    
 }
