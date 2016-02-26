@@ -103,6 +103,10 @@ class boolIfException : Exception{
 void main() {
    writeln("Assignment 3 in D");
    MtEnv s;
+   Value v = interp(new BinopC("+", new BinopC("*" new NumC(5) new NumC(3)), new NumC(4)));
+   assert((cast(numV) v).n == 19);
+   v = interp(new ifC(new BinopC("eq?", new numC(5), new numC(5)), new boolC(true), new boolC(false)));
+   assert((cast(boolV) v).b == true);
 }
 
 string topEval(string s) {
