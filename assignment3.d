@@ -4,26 +4,48 @@ import std.conv;
 import std.exception;
 import std.format;
 
+
+//////////////////////
+// Data Definitions //
+//////////////////////
+
+/** 
+ * ExprC (core language) is either:
+ * - a numC (number),
+ * - a boolC (boolean)
+ * - an idC (identifier),
+ * - an appC (function application),
+ * - a binopC (binary operation),
+ * - an ifC (conditional), or
+ * - a lamC (anonymous function)
+ */
 interface ExprC {}
 
+/* numC */
 class numC : ExprC {
    int n;
    this(int n) {
       this.n = n;
    }
 }
+
+/* boolC */
 class boolC : ExprC {
    bool b;
    this(bool b) {
       this.b = b;
    }
 }
+
+/* idC */
 class idC : ExprC {
    string s;
    this(string s) {
       this.s = s;
    }
 }
+
+/* appC */
 class appC : ExprC {
    ExprC fun; 
    ExprC[] args;
@@ -32,6 +54,8 @@ class appC : ExprC {
       this.args = args;
    }
 }
+
+/* binopC */
 class binopC : ExprC {
    string op; 
    ExprC lft; 
@@ -42,6 +66,8 @@ class binopC : ExprC {
       this.rht = rht;
    }
 }
+
+/* ifC */
 class ifC : ExprC {
    ExprC tst; 
    ExprC thn; 
@@ -52,6 +78,8 @@ class ifC : ExprC {
       this.els = els;
    }
 }
+
+/* lamC */
 class lamC : ExprC {
    string[] args; 
    ExprC bdy; 
@@ -61,6 +89,10 @@ class lamC : ExprC {
    }
 }
 
+/**
+ * Binding is:
+ * - a bind from symbol (string) to a value (Value)
+ */
 class Binding {
    string symbol; 
    Value val;
@@ -69,23 +101,38 @@ class Binding {
       this.val = val;
    }
 }
+
+/* An environment is an array of bindings */
 alias Env = Binding[];
+
+/* An empty environment is an empty array */
 alias MtEnv = Binding[0];
 
+/**
+ * A value is:
+ * - a number,
+ * - a boolean, or
+ * - a closure (with arguments, body, and an Env)
+ */
 interface Value {}
 
+/* number */
 class numV : Value {
    int n;
    this(int n) {
       this.n = n;
    }
 }
+
+/* boolean */
 class boolV : Value {
    bool b;
    this(bool b) {
       this.b = b;
    }
 }
+
+/* closure */
 class closV : Value {
    string[] args; 
    ExprC bdy; 
@@ -97,20 +144,28 @@ class closV : Value {
    }
 }
 
-class boolIfException : Exception{
-   this(string msg){
-      super(msg);
-   }
 
-}
+/////////////////////
+// Main Test Cases //
+/////////////////////
 
+/**
+ * Serves as a test runner for DOWQQ
+ * @return {void} nothing
+ */
 void main() {
-   writeln("DOWQQ");
-   MtEnv s;
-   Value v = interp(new BinopC("+", new BinopC("*", new NumC(5), new NumC(3)), new NumC(4)));
-   assert((cast(numV) v).n == 19);
-   v = interp(new ifC(new BinopC("eq?", new numC(5), new numC(5)), new boolC(true), new boolC(false)));
-   assert((cast(boolV) v).b == true);
+   writeln("\nAssignment 6: DOWQQ (OWQQ in D)");
+   writeln("Corbin G | Annie L | Mike R | Greg S");
+   writeln("\nRunning tests ...");
+
+   MtEnv mt;
+   numV numR;
+   boolV boolR;
+
+   numR = cast(numV)interp(new binopC("+", new binopC("*", new numC(5), new numC(3)), new numC(4)), mt);
+   assert(numR.n == 19);
+   boolR = cast(boolV)interp(new ifC(new binopC("eq?", new numC(5), new numC(5)), new boolC(true), new boolC(false)), mt);
+   assert(boolR.b == true);
 
    // tests for parse
    // assert((cast(numC)parse("0")).n == 0, "failed to parse \"0\"");
@@ -119,10 +174,6 @@ void main() {
    // assert((cast(numC)parse("-0")).n == 0, "failed to parse \"-0\"");
    // assert((cast(boolC)parse("true")).b == true, "failed to parse \"true\"");
    // assert((cast(boolC)parse("false")).b == false, "failed to parse \"false\"");
-
-   MtEnv mt;
-   numV numR;
-   boolV boolR;
 
    numR = cast(numV)interp(new binopC("+", new numC(1), new numC(2)), mt);
    assert(numR.n == 3);
@@ -158,36 +209,42 @@ void main() {
    assertThrown(interp(new binopC("boo", new boolC(false), new boolC(false)), mt));
    assertThrown(interp(new binopC("+", new boolC(false), new numC(3)), mt));
 
-   writeln("All asserts passed");
+   writeln("All asserts true!\n");
 }
 
+
+/////////////////////////
+// Interface Functions //
+/////////////////////////
+
+/**
+ * Consumes a string equivalent to a surface syntax, and evaluates the result.
+ * @param  {string} string s surface syntax of DOWQQ
+ * @return {string} evaluation result
+ */
 string topEval(string s) {
    return "";
 }
 
+/**
+ * Consumes a Value and serializes it to a string.
+ * @param  {Value} Value val resultant value from interp
+ * @return {string} string serializes result of the value
+ */
 string serialize(Value val) {
    return "";
 }
 
+/**
+ * Evaluates the DOWQQ AST into a Value.
+ * @param  {ExprC} ExprC e DOWQQ AST
+ * @param  {Env} Env env current environment
+ * @return {Value}  result of the evaluation
+ */
 Value interp(ExprC e, Env env) {
    if (cast(numC)e) {
       return new numV((cast(numC)e).n);
    }
-   else if(cast(ifC) e){
-      if(cast(boolC)(cast(ifC)e).tst){
-         if((cast(boolV)interp((cast(ifC)e).tst, env)).b){
-            interp((cast(ifC)e).thn, env);
-         }
-         else{
-            interp((cast(ifC)e).els, env);
-         }
-      }
-      else{
-         throw new boolIfException("First clause of an if statement must equate to a boolean");
-      }
-   }
-   else if(cast(lamC) e){
-      return new closV((cast(lamC) e).args , (cast(lamC) e).bdy, env);
    else if (cast(boolC)e) {
       return new boolV((cast(boolC)e).b);
    }
@@ -197,10 +254,48 @@ Value interp(ExprC e, Env env) {
                    interp(binopExprC.lft, env), 
                    interp(binopExprC.rht, env));
    }
-
-   return new numV(1);
+   else if (cast(ifC)e) {
+      ifC ifExprC = cast(ifC)e;
+      return ifcond(interp(ifExprC.tst, env), 
+                    ifExprC.thn, 
+                    ifExprC.els,
+                    env);
+   }   
+   else if(cast(lamC)e){
+      return new closV((cast(lamC) e).args , (cast(lamC) e).bdy, env);
+   }
+   else {
+      throw new Exception(format("Invalid AST: %s", e));
+   }
 }
 
+/**
+ * Parses the surface syntax into DOWQQ AST.
+ * @param  {string} string s surface syntax of OWQQ
+ * @return {ExprC} AST of DOWQQ
+ */
+ExprC parse (string s) {
+      return new numC(0);
+   if (matchFirst(s, r"(-?[1-9])+|(-?0)")) {
+      return new numC(to!int(s));
+   }
+   if (matchFirst(s, r"true")) {
+      return new boolC(true);
+   }
+   if (matchFirst(s, r"false")) {
+      return new boolC(false);
+   }
+   throw new Exception("Invalid OWQQ expression: \"" ~ s ~ "\"");
+}
+
+
+///////////////////////
+// Helper Functions  //
+///////////////////////
+
+/**
+ * Consumes operator and two values to perform a binary operation.
+ */
 Value binop(string op, Value lft, Value rht) {
    if (matchFirst(op, "eq?") && (!(cast(numV)lft) || !(cast(numV)rht)))
       return nonnumEq(lft, rht);
@@ -216,6 +311,9 @@ Value binop(string op, Value lft, Value rht) {
       throw new Exception("binop: one or more argument was not a number");
 }
 
+/**
+ * Performs eq? on non-number values.
+ */
 boolV nonnumEq(Value lft, Value rht) {
    bool result = false;
 
@@ -229,10 +327,16 @@ boolV nonnumEq(Value lft, Value rht) {
    return new boolV(result);
 }
 
+/**
+ * Checks of an operator is a binary comparison operator.
+ */
 bool isBinopCompOp(string op) {
    return matchFirst(op, r"eq\?") || matchFirst(op, r"<=");
 }
 
+/**
+ * Performs binary comparison (eq? or less-than-equal-to).
+ */
 boolV binopComp(string op, Value lft, Value rht) {
    int l = (cast(numV)lft).n;
    int r = (cast(numV)rht).n;
@@ -248,11 +352,17 @@ boolV binopComp(string op, Value lft, Value rht) {
    return new boolV(result);
 }
 
+/**
+ * Checks if an operator is a binary arithmetic operator.
+ */
 bool isBinopArithOp(string op) {
    return (matchFirst(op, r"\+") || matchFirst(op, r"-")
         || matchFirst(op, r"\*") || matchFirst(op, r"/"));
 }
 
+/**
+ * Performs a binary arithmetic operation on two values.
+ */
 numV binopArith(string op, Value lft, Value rht) {
    int l = (cast(numV)lft).n;
    int r = (cast(numV)rht).n;
@@ -270,19 +380,21 @@ numV binopArith(string op, Value lft, Value rht) {
    return new numV(result);
 }
 
-//ExprC parse (string s) {
-//   if (matchFirst(s, r"(-?[1-9])+|(-?0)")) {
-//      return new numC(to!int(s));
-//   }
-//   if (matchFirst(s, r"true")) {
-//      return new boolC(true);
-//   }
-//   if (matchFirst(s, r"false")) {
-//      return new boolC(false);
-//   }
-//   if (matchFirst(s,))
+/**
+ * Evaluates if condition and result.
+ */
+Value ifcond(Value tst, ExprC thn, ExprC els, Env env) {
+   Value result;
 
-//   assert(false, "Invalid OWQQ expression: \"" ~ s ~ "\"");
-//   return new numC(0);
-//}
+   if (cast(boolV)tst)
+      if ((cast(boolV)tst).b)
+         result = interp(thn, env);
+      else
+         result = interp(els, env);
+   else
+      throw new Exception(
+         "if's condition did not evaluate to a boolean value");
+
+   return result;
+}
 
