@@ -205,6 +205,9 @@ void main() {
    boolR = cast(boolV)interp(new binopC("eq?", new boolC(false), new boolC(false)), mt);
    assert(boolR.b == true, format("got: %s", boolR.b));
 
+   numR = cast(numV)interp(new appC(new lamC(["x","y"], new binopC("+", new idC("x"), new idC("y"))), [new numC(5), new numC(2)]), mt);
+   assert(numR.n == 7, format("got: %s", numR.n));
+
    assertThrown(interp(new binopC("/", new numC(1), new numC(0)), mt));
    assertThrown(interp(new binopC("boo", new boolC(false), new boolC(false)), mt));
    assertThrown(interp(new binopC("+", new boolC(false), new numC(3)), mt));
@@ -232,7 +235,17 @@ string topEval(string s) {
  * @return {string} string serializes result of the value
  */
 string serialize(Value val) {
-   return "";
+    if (cast(numV)val) {
+        return to!string((cast(numV)val).n);
+    }
+    if (cast(boolV)val) {
+        return to!string((cast(boolV)val).b);
+    }
+    if (cast(closV)val) {
+        return "#<procedure>";
+    } 
+
+    throw new Exception("Attempt to serialize unknown value"); 
 }
 
 /**
@@ -254,6 +267,9 @@ Value interp(ExprC e, Env env) {
                    interp(binopExprC.lft, env), 
                    interp(binopExprC.rht, env));
    }
+   else if (cast(idC)e) {
+       return lookup((cast(idC)e).s, env);
+   }
    else if (cast(ifC)e) {
       ifC ifExprC = cast(ifC)e;
       return ifcond(interp(ifExprC.tst, env), 
@@ -261,8 +277,37 @@ Value interp(ExprC e, Env env) {
                     ifExprC.els,
                     env);
    }   
-   else if(cast(lamC)e){
+   else if(cast(lamC)e) {
       return new closV((cast(lamC) e).args , (cast(lamC) e).bdy, env);
+   }
+   else if(cast(appC)e) {
+       auto app = to!appC(e); 
+       
+       Value clV = interp(app.fun, env);
+       
+       if (cast(closV)clV) {
+           
+           auto clv = to!closV(clV);
+        
+           if (clv.args.length == app.args.length) {
+               Env extndEnv = new Env(clv.args.length);
+               
+               for (int i = 0; i < clv.args.length; i++) {
+                   extndEnv[i] = new Binding(clv.args[i], interp(app.args[i], env));
+               }
+               
+               // Concatenate 
+               extndEnv ~= env;
+               
+               return interp(clv.bdy, extndEnv);                      
+           } 
+           else {
+               throw new Exception ("function arg length != num args supplied");
+           }
+       } 
+       else {
+           throw new Exception("Improperly formed function");
+       }
    }
    else {
       throw new Exception(format("Invalid AST: %s", e));
@@ -398,3 +443,20 @@ Value ifcond(Value tst, ExprC thn, ExprC els, Env env) {
    return result;
 }
 
+
+/**
+ * Looks for value tied to symbol in the environment
+ * @param  {String} symbol to look up in environment
+ * @param  {Env} Env environment with pairings of symbol to Value
+ * @return {Value} Found pairing of value to symbol or error
+ */
+Value lookup(string symbol, Env env) {
+
+    for (int i = 0; i < env.length; i++) {
+        if (symbol == env[i].symbol) {
+            return env[i].val;
+        }
+    }
+
+    throw new Exception(format("Lookup failed to find symbol: %s", symbol));    
+}
