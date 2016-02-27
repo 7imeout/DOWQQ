@@ -1,4 +1,8 @@
-import std.stdio, std.regex, std.conv;
+import std.stdio;
+import std.regex;
+import std.conv;
+import std.exception;
+import std.format;
 
 interface ExprC {}
 
@@ -28,7 +32,7 @@ class appC : ExprC {
       this.args = args;
    }
 }
-class BinopC : ExprC {
+class binopC : ExprC {
    string op; 
    ExprC lft; 
    ExprC rht;
@@ -95,14 +99,52 @@ class closV : Value {
 
 void main() {
    writeln("DOWQQ");
-   
+
    // tests for parse
-   assert((cast(numC)parse("0")).n == 0, "failed to parse \"0\"");
-   assert((cast(numC)parse("100")).n == 100, "failed to parse \"100\"");
-   assert((cast(numC)parse("-99")).n == -99,  "failed to parse \"-99\"");
-   assert((cast(numC)parse("-0")).n == 0, "failed to parse \"-0\"");
-   assert((cast(boolC)parse("true")).b == true, "failed to parse \"true\"");
-   assert((cast(boolC)parse("false")).b == false, "failed to parse \"false\"");
+   // assert((cast(numC)parse("0")).n == 0, "failed to parse \"0\"");
+   // assert((cast(numC)parse("100")).n == 100, "failed to parse \"100\"");
+   // assert((cast(numC)parse("-99")).n == -99,  "failed to parse \"-99\"");
+   // assert((cast(numC)parse("-0")).n == 0, "failed to parse \"-0\"");
+   // assert((cast(boolC)parse("true")).b == true, "failed to parse \"true\"");
+   // assert((cast(boolC)parse("false")).b == false, "failed to parse \"false\"");
+
+   MtEnv mt;
+   numV numR;
+   boolV boolR;
+
+   numR = cast(numV)interp(new binopC("+", new numC(1), new numC(2)), mt);
+   assert(numR.n == 3);
+
+   numR = cast(numV)interp(new binopC("-", new numC(2), new numC(1)), mt);
+   assert(numR.n == 1);
+
+   numR = cast(numV)interp(new binopC("*", new numC(2), new binopC("+", new numC(1), new numC(2))), mt);
+   assert(numR.n == 6);
+
+   numR = cast(numV)interp(new binopC("/", new binopC("+", new numC(1), new numC(2)), new binopC("+", new numC(1), new numC(2))), mt);
+   assert(numR.n == 1);
+
+   boolR = cast(boolV)interp(new binopC("eq?", new numC(2), new numC(2)), mt);
+   assert(boolR.b == true, format("got: %s", boolR.b));
+
+   boolR = cast(boolV)interp(new binopC("eq?", new numC(2), new numC(-2)), mt);
+   assert(boolR.b == false, format("got: %s", boolR.b));
+
+   boolR = cast(boolV)interp(new binopC("<=?", new numC(-2), new numC(2)), mt);
+   assert(boolR.b == true, format("got: %s", boolR.b));
+
+   boolR = cast(boolV)interp(new binopC("eq?", new numC(2), new numC(-2)), mt);
+   assert(boolR.b == false, format("got: %s", boolR.b));
+
+   boolR = cast(boolV)interp(new binopC("eq?", new numC(2), new boolC(false)), mt);
+   assert(boolR.b == false, format("got: %s", boolR.b));
+
+   boolR = cast(boolV)interp(new binopC("eq?", new boolC(false), new boolC(false)), mt);
+   assert(boolR.b == true, format("got: %s", boolR.b));
+
+   assertThrown(interp(new binopC("/", new numC(1), new numC(0)), mt));
+   assertThrown(interp(new binopC("boo", new boolC(false), new boolC(false)), mt));
+   assertThrown(interp(new binopC("+", new boolC(false), new numC(3)), mt));
 
    writeln("All asserts passed");
 }
@@ -122,23 +164,98 @@ Value interp(ExprC e, Env env) {
    else if (cast(boolC)e) {
       return new boolV((cast(boolC)e).b);
    }
+   else if (cast(binopC)e) {
+      binopC binopExprC = cast(binopC)e;
+      return binop(binopExprC.op, 
+                   interp(binopExprC.lft, env), 
+                   interp(binopExprC.rht, env));
+   }
 
    return new numV(1);
 }
 
-ExprC parse (string s) {
-   if (matchFirst(s, r"(-?[1-9])+|(-?0)")) {
-      return new numC(to!int(s));
-   }
-   if (matchFirst(s, r"true")) {
-      return new boolC(true);
-   }
-   if (matchFirst(s, r"false")) {
-      return new boolC(false);
-   }
-   if (matchFirst(s,))
-
-   assert(false, "Invalid OWQQ expression: \"" ~ s ~ "\"");
-   return new numC(0);
+Value binop(string op, Value lft, Value rht) {
+   if (matchFirst(op, "eq?") && (!(cast(numV)lft) || !(cast(numV)rht)))
+      return nonnumEq(lft, rht);
+   else if (isBinopCompOp(op) && cast(numV)lft && cast(numV)rht)
+      return binopComp(op, lft, rht);
+   else if (matchFirst(op, "/") && ((cast(numV)rht).n == 0))
+      throw new Exception("/: division by zero (DOWQQ)");
+   else if (isBinopArithOp(op) && cast(numV)lft && cast(numV)rht)
+      return binopArith(op, lft, rht);
+   else if (!isBinopArithOp(op))
+      throw new Exception(format("%s: not a binop", op));
+   else
+      throw new Exception("binop: one or more argument was not a number");
 }
+
+boolV nonnumEq(Value lft, Value rht) {
+   bool result = false;
+
+   if (cast(closV)lft || cast(closV)rht)
+      result = false;
+   else if (cast(boolV)lft && cast(boolV)rht) 
+      result = ((cast(boolV)lft).b == (cast(boolV)rht).b);
+   else
+      result = false;
+
+   return new boolV(result);
+}
+
+bool isBinopCompOp(string op) {
+   return matchFirst(op, r"eq\?") || matchFirst(op, r"<=");
+}
+
+boolV binopComp(string op, Value lft, Value rht) {
+   int l = (cast(numV)lft).n;
+   int r = (cast(numV)rht).n;
+   bool result = false;
+
+   if (matchFirst(op, r"eq\?"))
+      result = l == r;
+   else if (matchFirst(op, r"<="))
+      result = l <= r;
+   else
+      throw new Exception("%s invalid binop comparison operator", op);
+
+   return new boolV(result);
+}
+
+bool isBinopArithOp(string op) {
+   return (matchFirst(op, r"\+") || matchFirst(op, r"-")
+        || matchFirst(op, r"\*") || matchFirst(op, r"/"));
+}
+
+numV binopArith(string op, Value lft, Value rht) {
+   int l = (cast(numV)lft).n;
+   int r = (cast(numV)rht).n;
+   int result = 0;
+
+   if (matchFirst(op, r"\+"))
+      result = l + r;
+   else if (matchFirst(op, r"-"))
+      result = l - r;
+   else if (matchFirst(op, r"\*"))
+      result = l * r;
+   else if (matchFirst(op, r"/"))
+      result = l / r; 
+
+   return new numV(result);
+}
+
+//ExprC parse (string s) {
+//   if (matchFirst(s, r"(-?[1-9])+|(-?0)")) {
+//      return new numC(to!int(s));
+//   }
+//   if (matchFirst(s, r"true")) {
+//      return new boolC(true);
+//   }
+//   if (matchFirst(s, r"false")) {
+//      return new boolC(false);
+//   }
+//   if (matchFirst(s,))
+
+//   assert(false, "Invalid OWQQ expression: \"" ~ s ~ "\"");
+//   return new numC(0);
+//}
 
