@@ -211,6 +211,9 @@ void main() {
    boolR = cast(boolV)interp(new ifC(new binopC("eq?", new boolC(true), new numC(7)), new boolC(true), new boolC(false)), mt);
    assert(boolR.b == false, format("got: %s", boolR.b));
 
+   boolR = cast(boolV)interp(new ifC(new binopC("eq?", new numC(6), new numC(5)), new boolC(true), new boolC(false)),  mt);
+   assert(boolR.b == false, format("got: %s", boolR.b));
+
    // Tests for appC, lamC
    numR = cast(numV)interp(new appC(new lamC(["a"], new idC("a")), [new numC(4)]), mt);
    assert(numR.n == 4, format("got: %s", numR.n));
