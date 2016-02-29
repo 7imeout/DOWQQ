@@ -208,6 +208,12 @@ void main() {
    numR = cast(numV)interp(new appC(new lamC(["x","y"], new binopC("+", new idC("x"), new idC("y"))), [new numC(5), new numC(2)]), mt);
    assert(numR.n == 7, format("got: %s", numR.n));
 
+   boolR = cast(boolV)interp(new ifC(new binopC("eq?", new numC(6), new numC(5)), new boolC(true), new boolC(false)),  mt);
+   assert(boolR.b == false, format("got: %s", boolR.b));
+
+   boolR = cast(boolV)interp(new ifC(new binopC("eq?", new numC(5), new numC(5)), new boolC(true), new boolC(false)), mt);
+   assert(boolR.b == true, format("got: %s", boolR.b));
+
    assertThrown(interp(new binopC("/", new numC(1), new numC(0)), mt));
    assertThrown(interp(new binopC("boo", new boolC(false), new boolC(false)), mt));
    assertThrown(interp(new binopC("+", new boolC(false), new numC(3)), mt));
