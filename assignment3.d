@@ -162,11 +162,6 @@ void main() {
    numV numR;
    boolV boolR;
 
-   numR = cast(numV)interp(new binopC("+", new binopC("*", new numC(5), new numC(3)), new numC(4)), mt);
-   assert(numR.n == 19);
-   boolR = cast(boolV)interp(new ifC(new binopC("eq?", new numC(5), new numC(5)), new boolC(true), new boolC(false)), mt);
-   assert(boolR.b == true);
-
    // tests for parse
    // assert((cast(numC)parse("0")).n == 0, "failed to parse \"0\"");
    // assert((cast(numC)parse("100")).n == 100, "failed to parse \"100\"");
@@ -175,6 +170,7 @@ void main() {
    // assert((cast(boolC)parse("true")).b == true, "failed to parse \"true\"");
    // assert((cast(boolC)parse("false")).b == false, "failed to parse \"false\"");
 
+   // Tests for binopC
    numR = cast(numV)interp(new binopC("+", new numC(1), new numC(2)), mt);
    assert(numR.n == 3);
 
@@ -183,6 +179,9 @@ void main() {
 
    numR = cast(numV)interp(new binopC("*", new numC(2), new binopC("+", new numC(1), new numC(2))), mt);
    assert(numR.n == 6);
+
+   numR = cast(numV)interp(new binopC("+", new binopC("*", new numC(5), new numC(3)), new numC(4)), mt);
+   assert(numR.n == 19);
 
    numR = cast(numV)interp(new binopC("/", new binopC("+", new numC(1), new numC(2)), new binopC("+", new numC(1), new numC(2))), mt);
    assert(numR.n == 1);
@@ -196,18 +195,36 @@ void main() {
    boolR = cast(boolV)interp(new binopC("<=?", new numC(-2), new numC(2)), mt);
    assert(boolR.b == true, format("got: %s", boolR.b));
 
-   boolR = cast(boolV)interp(new binopC("eq?", new numC(2), new numC(-2)), mt);
-   assert(boolR.b == false, format("got: %s", boolR.b));
-
    boolR = cast(boolV)interp(new binopC("eq?", new numC(2), new boolC(false)), mt);
    assert(boolR.b == false, format("got: %s", boolR.b));
 
    boolR = cast(boolV)interp(new binopC("eq?", new boolC(false), new boolC(false)), mt);
    assert(boolR.b == true, format("got: %s", boolR.b));
 
+   // Tests for ifC
+   boolR = cast(boolV)interp(new ifC(new binopC("eq?", new numC(5), new numC(5)), new boolC(true), new boolC(false)), mt);
+   assert(boolR.b == true);
+
+   boolR = cast(boolV)interp(new ifC(new binopC("<=?", new numC(-5), new numC(2)), new boolC(true), new boolC(false)), mt);
+   assert(boolR.b == true, format("got: %s", boolR.b));
+
+   boolR = cast(boolV)interp(new ifC(new binopC("eq?", new boolC(true), new numC(7)), new boolC(true), new boolC(false)), mt);
+   assert(boolR.b == false, format("got: %s", boolR.b));
+
+   // Tests for appC, lamC
+   numR = cast(numV)interp(new appC(new lamC(["a"], new idC("a")), [new numC(4)]), mt);
+   assert(numR.n == 4, format("got: %s", numR.n));
+
    numR = cast(numV)interp(new appC(new lamC(["x","y"], new binopC("+", new idC("x"), new idC("y"))), [new numC(5), new numC(2)]), mt);
    assert(numR.n == 7, format("got: %s", numR.n));
+   
+   numR = cast(numV)interp(new appC(new lamC(["a"], new ifC(new binopC("<=?", new idC("a"), new numC(10)), new idC("a"), new numC(0))), [new numC(5)]), mt);
+   assert(numR.n == 5, format("got: %s", numR.n));
 
+   numR = cast(numV)interp(new appC(new lamC(["a"], new binopC("+", new idC("a"), new appC(new lamC(["b"], new idC("b")), [new numC(6)]))), [new numC(4)]), mt);
+   assert(numR.n == 10, format("got: %s", numR.n));
+
+   // Test exceptions
    assertThrown(interp(new binopC("/", new numC(1), new numC(0)), mt));
    assertThrown(interp(new binopC("boo", new boolC(false), new boolC(false)), mt));
    assertThrown(interp(new binopC("+", new boolC(false), new numC(3)), mt));
