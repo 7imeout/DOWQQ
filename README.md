@@ -1,2 +1,2 @@
 # DOWQQ
-OWQQ implemented in D instead of PLAY-typed.
+OWQQ implemented in D instead of PLAI-typed.
